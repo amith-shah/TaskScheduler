@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
+using TaskScheduler.Application;
 using TaskScheduler.BlazorServer.Components;
-using TaskScheduler.Infrastructure.Persistence;
+using TaskScheduler.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,21 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Configure Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseSqlite(connectionString);
-
-    // Enable sensitive data logging in development
-    if (builder.Environment.IsDevelopment())
-    {
-        options.EnableSensitiveDataLogging();
-        options.EnableDetailedErrors();
-    }
-});
+// Register Application and Infrastructure services
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(
+    builder.Configuration,
+    builder.Environment.IsDevelopment());
 
 var app = builder.Build();
 
