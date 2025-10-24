@@ -72,3 +72,103 @@ Core domain entities include:
 - `CalendarEvent` - Integrated calendar entries from Teams and manual entries
 
 See [Technical Design - Domain Layer](docs/TechnicalDesign.md#domain-layer) for complete entity definitions and relationships.
+
+## Logging Best Practices
+
+**IMPORTANT**: This project uses **Serilog** for structured logging. Logging extensively is critical for debugging, monitoring, and understanding application behavior.
+
+### Logging Philosophy
+
+- **Log liberally** - When in doubt, add a log statement
+- **Use structured logging** - Include context properties for filtering and searching
+- **Log at appropriate levels** - Use the correct log level for each situation
+- **Log meaningful context** - Include IDs, user information, and relevant state
+
+### When to Log
+
+**ALWAYS log the following**:
+
+1. **Service method entry/exit** - Log when entering and exiting application service methods
+   ```csharp
+   _logger.LogInformation("Creating task with title {TaskTitle} for user {UserId}", title, userId);
+   ```
+
+2. **Domain events** - Log when domain events are raised or handled
+   ```csharp
+   _logger.LogInformation("Task {TaskId} completed by user {UserId}", taskId, userId);
+   ```
+
+3. **External service calls** - Log before and after calling external APIs (Teams, Graph API)
+   ```csharp
+   _logger.LogInformation("Fetching assignments from Teams for user {UserId}", userId);
+   ```
+
+4. **Database operations** - Log repository operations (EF Core logs queries automatically)
+   ```csharp
+   _logger.LogInformation("Saving {EntityCount} entities to database", entities.Count);
+   ```
+
+5. **State changes** - Log significant application state changes
+   ```csharp
+   _logger.LogInformation("Pomodoro session {SessionId} started for task {TaskId}", sessionId, taskId);
+   ```
+
+6. **Errors and exceptions** - ALWAYS log exceptions with full context
+   ```csharp
+   _logger.LogError(ex, "Failed to create task {TaskTitle} for user {UserId}", title, userId);
+   ```
+
+7. **Validation failures** - Log when validation fails
+   ```csharp
+   _logger.LogWarning("Task validation failed for user {UserId}: {ValidationErrors}", userId, errors);
+   ```
+
+8. **Background job execution** - Log background task start, completion, and failures
+   ```csharp
+   _logger.LogInformation("Teams sync job started for user {UserId}", userId);
+   ```
+
+### Log Levels
+
+- **Trace**: Very detailed diagnostic information (rarely used)
+- **Debug**: Detailed debugging information (development only)
+- **Information**: General informational messages about application flow
+- **Warning**: Unexpected but handled situations (validation failures, retries)
+- **Error**: Error events that don't stop execution
+- **Critical**: Fatal errors that cause application failure
+
+### What NOT to Log
+
+- ❌ Passwords, tokens, or API keys
+- ❌ Personally identifiable information (PII) without masking
+- ❌ Complete sensitive user data
+- ❌ Inside tight loops (use sampling or aggregate logging)
+
+### Structured Logging Example
+
+```csharp
+// Good - Structured logging with context
+_logger.LogInformation(
+    "User {UserId} completed task {TaskId} in category {CategoryName} after {Duration}ms",
+    userId, taskId, categoryName, duration);
+
+// Bad - String interpolation loses structure
+_logger.LogInformation($"User {userId} completed task {taskId}");
+```
+
+### Best Practices
+
+1. **Use dependency injection** - Inject `ILogger<T>` into your classes
+2. **Use semantic naming** - Property names should be clear and consistent
+3. **Include correlation IDs** - For tracking requests across layers
+4. **Log performance metrics** - For slow operations, log duration
+5. **Log user actions** - Help understand user behavior and debug issues
+6. **Review logs regularly** - Logs should be useful and not noise
+
+### Configuration
+
+Logging is configured in `appsettings.json`:
+- Console sink for development
+- File sink for production (`logs/` folder)
+- Minimum level configurable per namespace
+- Request logging middleware captures HTTP requests
